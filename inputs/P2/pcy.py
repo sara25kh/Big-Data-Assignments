@@ -95,6 +95,7 @@ def print_most_frequent_triples(frequent_triples, n):
 def calculate_confidence(itemset_A, itemset_B, frequent_triples, frequent_pairs):
     # Join A and B to create the union itemset
     union_itemset = set(itemset_A).union(set(itemset_B))
+    # print(itemset_A)
     # print('union_itemset',tuple(union_itemset))
     # print(type(frequent_itemsets.keys()))
     # for key in frequent_itemsets.keys():
@@ -104,6 +105,7 @@ def calculate_confidence(itemset_A, itemset_B, frequent_triples, frequent_pairs)
     # print('looking for', tuple(union_itemset))
     support_A_union_B = frequent_triples.get(tuple(union_itemset), 0)
     support_A = frequent_pairs.get(tuple(itemset_A), 0)
+    # print(support_A)
     # print("support_A_union_B", support_A_union_B)
     # Calculate confidence
     if support_A != 0:
@@ -120,7 +122,7 @@ def get_top_rules(frequent_triples, frequent_pairs):
     # Loop through each frequent triple
     for triple, count in frequent_triples.items():
         A, B, C = triple
-        
+        print(triple)
         # Calculate confidence scores for the rules (A, B) -> C, (A, C) -> B, and (B, C) -> A
         confidence_AB_C = calculate_confidence([A, B], [C], frequent_triples, frequent_pairs)
         confidence_AC_B = calculate_confidence([A, C], [B], frequent_triples, frequent_pairs)
@@ -140,7 +142,7 @@ def get_top_rules(frequent_triples, frequent_pairs):
 def calculate_interest(itemset_I, item_j,frequent_items, frequent_triples, frequent_pairs, total_transactions):
     # Calculate confidence of the association rule I -> j
     confidence = calculate_confidence(itemset_I, [item_j], frequent_triples, frequent_pairs)
-    
+    # print(itemset_I)
     # Calculate support of j
     support_j = frequent_items.get(item_j, 0)
     # Calculate fraction of baskets that contain j
@@ -156,14 +158,18 @@ def get_top_rules_by_interest(frequent_items,frequent_triples, frequent_pairs, t
     top_rules = []
     
     # Loop through each frequent pair
-    for pair, count in frequent_pairs.items():
-        I, j = pair
+    for pair, count in frequent_triples.items():
+        A,B,C = pair
         
         # Calculate interest score for the rule I -> j
-        interest_I_j = calculate_interest([I], j, frequent_items,frequent_triples, frequent_pairs, total_transactions)
-        
+        interest_AB_C = calculate_interest([A,B], C, frequent_items,frequent_triples, frequent_pairs, total_transactions)
+        interest_AC_B = calculate_interest([A,C], B, frequent_items,frequent_triples, frequent_pairs, total_transactions)
+        interest_BC_A = calculate_interest([C,B], A, frequent_items,frequent_triples, frequent_pairs, total_transactions)
+        # print(I)
         # Add the rule and its interest score to the list
-        top_rules.append((f"{I} -> {j}", interest_I_j))
+        top_rules.append((f"{A,B} -> {C}", interest_AB_C))
+        top_rules.append((f"{A,C} -> {B}", interest_AC_B))
+        top_rules.append((f"{C,B} -> {A}", interest_BC_A))
     
     # Sort the rules based on interest score in descending order
     top_rules.sort(key=lambda x: x[1], reverse=True)
@@ -259,7 +265,7 @@ if __name__ == "__main__":
         print(rule, ":", interest)
 
     # Calculate lift scores for association rules based on frequent triples
-    top_rules_lift = calculate_lift_for_triples(frequent_items , frequent_triples, frequent_pairs)
+    top_rules_lift = calculate_lift_for_triples(frequent_items , frequent_triples , frequent_pairs)
     
     # Print the top rules based on lift
     print("Top 5 rules based on lift:")
