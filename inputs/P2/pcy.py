@@ -19,7 +19,6 @@ def get_frequent_items(data, min_support):
     
     # Filtering frequent items based on minimum support
     frequent_items = {item: count for item, count in item_counts.items() if count >= min_support}
-    
     return frequent_items
 
 # Function to get frequent pairs of items based on minimum support
@@ -55,19 +54,23 @@ def get_frequent_triples(data, min_support, frequent_pairs):
     
     # Counting occurrences of triples of items
     for basket in data:
-        for pair, count in frequent_pairs.items():
-            if pair[0] in basket and pair[1] in basket:
-                for item in basket:
-                    if item != pair[0] and item != pair[1]:
-                        triple = tuple(sorted(list(pair) + [item]))
-                        if triple in triple_counts:
+        for i in range(len(basket)):
+            for j in range(i+1, len(basket)):
+                for k in range(j+1, len(basket)):
+                    item1 = basket[i]
+                    item2 = basket[j]
+                    item3 = basket[k]
+
+                    triple = tuple(sorted([item1,item2,item3]))
+                    if triple in triple_counts:
                             triple_counts[triple] += 1
-                        else:
+                    else:
                             triple_counts[triple] = 1
-    
+
     # Filtering frequent triples based on minimum support
     frequent_triples = {triple: count for triple, count in triple_counts.items() if count >= min_support}
-    
+    # print(frequent_triples)
+   
     return frequent_triples
 
 # Function to print the most frequent items
@@ -91,58 +94,61 @@ def print_most_frequent_triples(frequent_triples, n):
     for triple, count in sorted_triples:
         print(triple, ":", count)
 
-# Function to calculate confidence score of association rules
-def calculate_confidence(itemset_A, itemset_B, frequent_triples, frequent_pairs):
-    # Join A and B to create the union itemset
-    union_itemset = set(itemset_A).union(set(itemset_B))
-    # print(itemset_A)
-    # print('union_itemset',tuple(union_itemset))
-    # print(type(frequent_itemsets.keys()))
-    # for key in frequent_itemsets.keys():
-    #     if(len(key) > 2):
-    #         print('key', key)
-    # Calculate support of A and B
-    # print('looking for', tuple(union_itemset))
-    support_A_union_B = frequent_triples.get(tuple(union_itemset), 0)
-    support_A = frequent_pairs.get(tuple(itemset_A), 0)
-    # print(support_A)
-    # print("support_A_union_B", support_A_union_B)
-    # Calculate confidence
-    if support_A != 0:
-        confidence = support_A_union_B / support_A
-    else:
-        confidence = 0
-    
-    return confidence
 
-# Function to get top rules based on confidence
-def get_top_rules(frequent_triples, frequent_pairs):
+def get_top_rules_by_confidence(frequent_triples, frequent_pairs):
     top_rules = []
     
     # Loop through each frequent triple
-    for triple, count in frequent_triples.items():
+    for triple in frequent_triples:
         A, B, C = triple
-        print(triple)
-        # Calculate confidence scores for the rules (A, B) -> C, (A, C) -> B, and (B, C) -> A
-        confidence_AB_C = calculate_confidence([A, B], [C], frequent_triples, frequent_pairs)
-        confidence_AC_B = calculate_confidence([A, C], [B], frequent_triples, frequent_pairs)
-        confidence_BC_A = calculate_confidence([B, C], [A], frequent_triples, frequent_pairs)
+        # print(triple)
+        support_A_B = frequent_pairs.get((A, B), frequent_pairs.get((B,A),0))
+        support_A_C = frequent_pairs.get((A, C), frequent_pairs.get((C,A),0))
+        support_B_C = frequent_pairs.get((B, C), frequent_pairs.get((C,B),0))
+        confidence_AB_C = frequent_triples.get((A, B, C), 0) / support_A_B if support_A_B != 0 and frequent_triples.get((A, B, C), 0) < support_A_B  else 0
+        confidence_AC_B = frequent_triples.get((A, B, C), 0) / support_A_C if support_A_C != 0 and frequent_triples.get((A, B, C), 0) < support_A_C else 0
+        confidence_BC_A = frequent_triples.get((A, B, C), 0) / support_B_C if support_B_C != 0 and frequent_triples.get((A, B, C), 0) < support_B_C else 0
+
+        # Get support_A from frequent_pairs
         
-        # Add the rules and their confidence scores to the list
+        # print((A,B))
+        # Get support_A_union_B from frequent_triples
+        # support_A_union_B = frequent_triples.get(triple, 0)
+        # print(support_A_union_B)
+        # Calculate confidence
+        # if support_A != 0:
+        #     confidence_AB_C = support_A_union_B / support_A
+        # else:
+        #     confidence_AB_C = 0
+        
+        # Calculate confidence for other permutations
+        # confidence_AC_B = frequent_triples.get((A, C, B), 0) / support_A if support_A != 0 else 0
+        # confidence_BC_A = frequent_triples.get((B, C, A), 0) / support_A if support_A != 0 else 0
+        # confidence_AB_C = frequent_triples.get((A, B, C), 0) / support_A if support_A != 0 else 0
+        
+        # Append rules and their confidences to top_rules list
         top_rules.append((f"({A}, {B}) -> {C}", confidence_AB_C))
         top_rules.append((f"({A}, {C}) -> {B}", confidence_AC_B))
         top_rules.append((f"({B}, {C}) -> {A}", confidence_BC_A))
-    
+        # if triple == ('ground beef', 'mineral water', 'spaghetti'):
+        #     print(frequent_triples.get((A, B, C), 0))
+        #     print( B , C ,A ,confidence_BC_A)
+            # print(support_A_union_B ,',',support_A)
     # Sort the rules based on confidence score in descending order
     top_rules.sort(key=lambda x: x[1], reverse=True)
     
-    return top_rules[:5]  # Return top 5 rules
+    return top_rules[:5]
+
 
 # Function to calculate interest of association rules
 def calculate_interest(itemset_I, item_j,frequent_items, frequent_triples, frequent_pairs, total_transactions):
     # Calculate confidence of the association rule I -> j
-    confidence = calculate_confidence(itemset_I, [item_j], frequent_triples, frequent_pairs)
-    # print(itemset_I)
+    # confidence = calculate_confidence(itemset_I, [item_j], frequent_triples, frequent_pairs)
+    
+    triple = (itemset_I[0],itemset_I[1],item_j)
+    pair = (itemset_I[0],itemset_I[1])
+    support_pair = frequent_pairs.get(pair , frequent_pairs.get((itemset_I[0],itemset_I[1]) , 0))
+    confidence = frequent_triples.get(tuple(triple),0) / support_pair if support_pair!=0 else 0
     # Calculate support of j
     support_j = frequent_items.get(item_j, 0)
     # Calculate fraction of baskets that contain j
@@ -185,6 +191,7 @@ def calculate_lift(itemset_A, itemset_B,frequent_items ,frequent_triples, freque
     # Calculate support of A union B
     union_itemset = set(itemset_A).union(set(itemset_B))
     support_A_union_B = frequent_triples.get(tuple(union_itemset), 0)
+    # print(union_itemset ,':' , support_A_union_B)
     
     # Calculate lift
     if support_A != 0 and support_B != 0:
@@ -249,7 +256,7 @@ if __name__ == "__main__":
     print_most_frequent_triples(frequent_triples, 10)
 
     # Get top rules based on confidence
-    top_rules = get_top_rules(frequent_triples, frequent_pairs)
+    top_rules = get_top_rules_by_confidence(frequent_triples, frequent_pairs)
     
     # Print the top rules
     print("Top 5 rules based on confidence:")
@@ -271,3 +278,66 @@ if __name__ == "__main__":
     print("Top 5 rules based on lift:")
     for rule, lift in top_rules_lift:
         print(rule, ":", lift)
+
+
+
+
+
+
+
+
+
+
+
+'''''
+# Function to calculate confidence score of association rules
+def calculate_confidence(itemset_A, itemset_B, frequent_triples, frequent_pairs):
+    # Join A and B to create the union itemset
+    union_itemset = set(itemset_A).union(set(itemset_B))
+    # union_itemset = itemset_A + itemset_B
+    # # Calculate support of A and B
+    
+    # if union_itemset in frequent_triples.items():
+    #     support_A_union_B = frequent_triples.get(tuple(union_itemset), 0)
+    #     support_A = frequent_pairs.get(tuple(itemset_A), 0)
+    # # print(support_A)
+    # Convert union_itemset to a tuple
+    union_itemset_tuple = tuple(union_itemset)
+    
+    # Check if union_itemset_tuple is in frequent_triples keys
+    if union_itemset_tuple in frequent_triples:
+       
+        # If it exists, get the support value
+        support_A_union_B = frequent_triples[union_itemset_tuple]
+        support_A = frequent_pairs.get(tuple(itemset_A), 0)
+    
+    # Calculate confidence
+    if support_A != 0:
+        confidence = support_A_union_B / support_A
+    else:
+        confidence = 0
+    
+    return confidence 
+
+# Function to get top rules based on confidence
+def get_top_rules(frequent_triples, frequent_pairs):
+    top_rules = []
+    # Loop through each frequent triple
+    for triple, count in frequent_triples.items():
+        A, B, C = triple
+
+        # Calculate confidence scores for the rules (A, B) -> C, (A, C) -> B, and (B, C) -> A
+        confidence_AB_C = calculate_confidence([A, B], [C], frequent_triples, frequent_pairs)
+        confidence_AC_B = calculate_confidence([A, C], [B], frequent_triples, frequent_pairs)
+        confidence_BC_A = calculate_confidence([B, C], [A], frequent_triples, frequent_pairs)
+       
+        # Add the rules and their confidence scores to the list
+        top_rules.append((f"({A}, {B}) -> {C}", confidence_AB_C))
+        top_rules.append((f"({A}, {C}) -> {B}", confidence_AC_B))
+        top_rules.append((f"({B}, {C}) -> {A}", confidence_BC_A))
+
+    # Sort the rules based on confidence score in descending order
+    top_rules.sort(key=lambda x: x[1], reverse=True)
+    
+    return top_rules[:5]   # Return top 5 rules
+    '''     
